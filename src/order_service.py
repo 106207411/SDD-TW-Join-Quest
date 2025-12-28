@@ -11,6 +11,8 @@ class OrderService:
         self.threshold_discount_threshold = None
         self.threshold_discount_amount = None
         self.buy_one_get_one_cosmetics = False
+        self.double11_group_size = None
+        self.double11_discount_rate = None
     
     def set_threshold_discount(self, threshold: float, discount: float):
         """Configure threshold discount promotion."""
@@ -20,6 +22,11 @@ class OrderService:
     def set_buy_one_get_one_cosmetics(self, enabled: bool):
         """Configure buy one get one promotion for cosmetics."""
         self.buy_one_get_one_cosmetics = enabled
+    
+    def set_double11_bulk_discount(self, group_size: int, discount_rate: float):
+        """Configure Double 11 bulk discount promotion."""
+        self.double11_group_size = group_size
+        self.double11_discount_rate = discount_rate
     
     def checkout(self, items: List[OrderItem]) -> Order:
         """
@@ -39,6 +46,7 @@ class OrderService:
         
         # Apply promotions
         self._apply_buy_one_get_one_promotion(order, items)
+        self._apply_double11_bulk_discount(order, items)
         self._apply_threshold_discount(order)
         
         return order
@@ -61,11 +69,34 @@ class OrderService:
     
     def _apply_threshold_discount(self, order: Order) -> None:
         """Apply threshold discount if applicable."""
-        discount = 0
+        additional_discount = 0
         if (self.threshold_discount_threshold is not None and 
             self.threshold_discount_amount is not None and
             order.original_amount >= self.threshold_discount_threshold):
-            discount = self.threshold_discount_amount
+            additional_discount = self.threshold_discount_amount
         
-        order.discount = discount
-        order.total_amount = order.original_amount - discount
+        order.discount += additional_discount
+        order.total_amount = order.original_amount - order.discount
+    
+    def _apply_double11_bulk_discount(self, order: Order, items: List[OrderItem]) -> None:
+        """Apply Double 11 bulk discount for same product purchases."""
+        if self.double11_group_size is None or self.double11_discount_rate is None:
+            return
+        
+        # Calculate discount for each product
+        total_discount = 0
+        for item in items:
+            quantity = item.quantity
+            unit_price = item.product.unit_price
+            
+            # Calculate how many complete groups of group_size
+            complete_groups = quantity // self.double11_group_size
+            remaining_items = quantity % self.double11_group_size
+            
+            # Discount applies only to complete groups
+            if complete_groups > 0:
+                discount_per_group = self.double11_group_size * unit_price * (self.double11_discount_rate / 100)
+                total_discount += complete_groups * discount_per_group
+        
+        order.discount = total_discount
+        order.total_amount = order.original_amount - total_discount

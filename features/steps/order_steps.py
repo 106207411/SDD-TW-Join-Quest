@@ -30,6 +30,25 @@ def step_bogo_cosmetics_active(context):
     context.order_service.set_buy_one_get_one_cosmetics(True)
 
 
+@given('the Double 11 promotion is active')
+def step_double11_active(context):
+    """Set up order service with Double 11 promotion."""
+    if not hasattr(context, 'order_service') or context.order_service is None:
+        context.order_service = OrderService()
+
+
+@given('the bulk discount rule for Double 11 is')
+def step_double11_bulk_discount_rule(context):
+    """Configure bulk discount rule for Double 11."""
+    if not hasattr(context, 'order_service') or context.order_service is None:
+        context.order_service = OrderService()
+    for row in context.table:
+        group_size = int(row['groupSize'])
+        discount_rate_str = row['discountRate'].rstrip('%')
+        discount_rate = float(discount_rate_str)
+        context.order_service.set_double11_bulk_discount(group_size, discount_rate)
+
+
 @when('a customer places an order with')
 def step_place_order(context):
     """Process an order with given items."""
